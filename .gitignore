@@ -1,0 +1,16 @@
+.metals
+.project
+.settings
+.vscode
+.bloop
+project/
+target/
+logs/
+.cache/
+.history/
+.idea/
+*.iml
+*.class
+sbt.json
+*.log
+*.swp
