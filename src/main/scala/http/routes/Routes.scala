@@ -23,6 +23,7 @@ import http.models.Person
 import http.ErrorInfo.{ BadRequest, InternalServerError, NotFound }
 import services.PersonService
 import services.PersonServiceLive
+import zio.kafka.producer.Producer
 
 object Routes:
   val httpErrors: OneOf[ErrorInfo, ErrorInfo] = oneOf[ErrorInfo](
@@ -42,7 +43,7 @@ object Routes:
     .out(jsonBody[Option[Person]])
     .errorOut(httpErrors)
 
-  val createPersonServer: ZServerEndpoint[PersonService, Any] = createPersonEndpoint.zServerLogic { person =>
+  val createPersonServer: ZServerEndpoint[PersonService & Producer, Any] = createPersonEndpoint.zServerLogic { person =>
     PersonService.create(person).mapError {
       case e: Exception =>
         println(e)
@@ -51,7 +52,7 @@ object Routes:
     }
   }
 
-  val getPersonServer = getPersonEndpoint.zServerLogic { (id: Long) =>
+  val getPersonServer: ZServerEndpoint[PersonService & Producer, Any] = getPersonEndpoint.zServerLogic { (id: Long) =>
     PersonService.read(id).mapError(_ => InternalServerError(s"Person with Id $id not found"))
   }
 
@@ -60,11 +61,11 @@ object Routes:
     .out(stringBody)
     .errorOut(httpErrors)
 
-  val helloworldServer: ZServerEndpoint[PersonService, Any] = helloWorldEndpoint.zServerLogic { _ =>
+  val helloworldServer: ZServerEndpoint[PersonService & Producer, Any] = helloWorldEndpoint.zServerLogic { _ =>
     ZIO.succeed("Hello, World!")
   }
 
-  val allEndpoints: List[ZServerEndpoint[PersonService, Any]] =
+  val allEndpoints: List[ZServerEndpoint[PersonService & Producer, Any]] =
     List(createPersonServer, helloworldServer, getPersonServer)
 
   val routes = ZHttp4sServerInterpreter().from(allEndpoints).toRoutes

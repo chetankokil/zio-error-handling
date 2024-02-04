@@ -20,6 +20,8 @@ import domain.repository.PersonRepository
 import domain.repository.PersonRepositoryLive
 import services.PersonService
 import services.PersonServiceLive
+import zio.kafka.producer.Producer
+import zio.kafka.producer.ProducerSettings
 
 object Main extends ZIOAppDefault {
 
@@ -31,18 +33,20 @@ object Main extends ZIOAppDefault {
   // private def produce(topic: String, key: Long, value: String): RIO[Any with Producer, RecordMetadata] =
   //   Producer.produce[Any, Long, String](topic, key, value, keySerializer = Serde.long, valueSerializer = Serde.string)
 
-  // private def producer: ZLayer[Any, Throwable, Producer] =
-  //   ZLayer.scoped(Producer.make(ProducerSettings(BOOSTRAP_SERVERS)))
+  private def producer: ZLayer[Any, Throwable, Producer] =
+    ZLayer.scoped(Producer.make(ProducerSettings(BOOSTRAP_SERVERS)))
 
-  //create a transactor defined in doobie
+  // create a transactor defined in doobie
   private def transactor: ZManaged[Any, Throwable, Transactor[Task]] =
-    HikariTransactor.newHikariTransactor[Task](
-      "org.postgresql.Driver", 
-      "jdbc:postgresql://localhost:5432/postgres",
-      "postgres", 
-      "postgres", 
-      ExecutionContexts.synchronous
-    ).toManagedZIO
+    HikariTransactor
+      .newHikariTransactor[Task](
+        "org.postgresql.Driver",
+        "jdbc:postgresql://localhost:5432/postgres",
+        "postgres",
+        "postgres",
+        ExecutionContexts.synchronous
+      )
+      .toManagedZIO
 
   val environment = transactor.toLayer >>> PersonRepositoryLive.layer >>> PersonServiceLive.layer
 
@@ -50,6 +54,6 @@ object Main extends ZIOAppDefault {
     - <- Server.run
   } yield ()
 
-  def run = app.provideLayer(environment).exitCode
-   
+  def run = app.provideLayer(producer ++ environment).exitCode
+
 }
