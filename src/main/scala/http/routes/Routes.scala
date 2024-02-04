@@ -21,23 +21,31 @@ package http.routes
   import http.ErrorInfo
   import http.models.Person
   import http.ErrorInfo.{ BadRequest, InternalServerError, NotFound }
+  import services.PersonService
+  import services.PersonServiceLive
 
-  object Routes {
+
+  object Routes:
     val httpErrors: OneOf[ErrorInfo, ErrorInfo] = oneOf[ErrorInfo](
       oneOfVariant(StatusCode.InternalServerError, jsonBody[InternalServerError]),
       oneOfVariant(StatusCode.BadRequest, jsonBody[BadRequest]),
       oneOfVariant(StatusCode.NotFound, jsonBody[NotFound])
-    )
+    )    
 
-
-    val createPersonEndpoint: PublicEndpoint[Person, ErrorInfo, Person, Any] = endpoint.post
+    val createPersonEndpoint: PublicEndpoint[Person, ErrorInfo, Long, Any] = endpoint.post
       .in("person")
       .in(jsonBody[Person])
-      .out(jsonBody[Person])
+      .out(plainBody[Long])
       .errorOut(httpErrors)
 
-    val createPersonServer: ZServerEndpoint[Any, Any] = createPersonEndpoint.zServerLogic[Any] { person =>
-      ZIO.succeed(person)
+    val createPersonServer: ZServerEndpoint[PersonService, Any] = createPersonEndpoint.zServerLogic { person =>
+      PersonService.create(person).mapError {
+        case e: Exception => {
+          println(e)
+          InternalServerError("Internal Server Error")
+        }
+        case _ => InternalServerError("Internal Server Error")
+      }
     }
 
     val helloWorldEndpoint: PublicEndpoint[Unit, ErrorInfo, String, Any] = endpoint.get
@@ -45,12 +53,10 @@ package http.routes
       .out(stringBody)
       .errorOut(httpErrors)
 
-    val helloworldServer: ZServerEndpoint[Any, Any] = helloWorldEndpoint.zServerLogic[Any] { _ =>
+    val helloworldServer: ZServerEndpoint[PersonService, Any] = helloWorldEndpoint.zServerLogic { _ =>
       ZIO.succeed("Hello, World!")
     }
 
-    val allEndpoints = List(createPersonServer, helloworldServer)
+    val allEndpoints : List[ZServerEndpoint[PersonService, Any]] = List(createPersonServer, helloworldServer)
 
-    val endpoints: HttpRoutes[Task] =
-      ZHttp4sServerInterpreter().from(allEndpoints).toRoutes
-  }
+    val routes = ZHttp4sServerInterpreter().from(allEndpoints).toRoutes

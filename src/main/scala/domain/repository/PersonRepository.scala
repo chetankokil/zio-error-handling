@@ -2,13 +2,14 @@ package domain.repository
 
 import http.models.Person
 import zio.*
-import zio.interop.catz.*
 import cats.implicits.*
 import doobie.*
 import doobie.implicits.*
 import doobie.implicits.javasql.*
 import doobie.util.transactor.Transactor
 import doobie.util.transactor
+import zio.interop.catz.*
+import zio.interop.catz.implicits.*
 
 trait PersonRepository extends Repository[Task, Person, Long]:
     def create(entity: Person): Task[Long]
@@ -18,7 +19,7 @@ trait PersonRepository extends Repository[Task, Person, Long]:
     def list(): Task[List[Person]]
 
 
-case class PersonRepositoryImpl(txn: Transactor[Task]) extends PersonRepository:
+case class PersonRepositoryLive(txn: Transactor[Task]) extends PersonRepository:
     def create(entity: Person): Task[Long] = 
         sql"""
             INSERT INTO person (name, age)
@@ -53,6 +54,6 @@ case class PersonRepositoryImpl(txn: Transactor[Task]) extends PersonRepository:
         .to[List]
         .transact(txn)
 
-    object PersonRepositoryLive:
-        val layer:ZLayer[Transactor[Task], Nothing, PersonRepositoryImpl] = 
-            ZLayer.fromFunction(PersonRepositoryImpl(_))
+object PersonRepositoryLive:
+    val layer:URLayer[Transactor[Task],PersonRepository] = 
+        ZLayer.fromFunction(PersonRepositoryLive(_))
