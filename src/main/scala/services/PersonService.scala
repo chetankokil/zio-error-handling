@@ -2,7 +2,7 @@ package services
 
 import http.models.Person
 import domain.repository.PersonRepository
-import zio.{ Task, URLayer, ZIO, ZLayer }
+import zio.{ RIO, Task, URLayer, ZIO, ZLayer }
 import domain.repository.PersonRepositoryLive
 import zio.interop.catz.*
 import zio.interop.catz.implicits.*
@@ -17,9 +17,9 @@ trait PersonService:
 object PersonService:
   def create(entity: Person): ZIO[PersonService, Throwable, Long] = ZIO.serviceWithZIO[PersonService](_.create(entity))
   def read(id: Long): ZIO[PersonService, Throwable, Option[Person]] = ZIO.serviceWithZIO[PersonService](_.read(id))
-  def update(entity: Person): Task[Unit]                            = ???
-  def delete(id: Long): Task[Unit]                                  = ???
-  def list(): Task[List[Person]]                                    = ???
+  def update(entity: Person): RIO[PersonService, Unit] = ZIO.serviceWithZIO[PersonService](_.update(entity))
+  def delete(id: Long): RIO[PersonService, Unit]       = ZIO.serviceWithZIO[PersonService](_.delete(id))
+  def list(): RIO[PersonService, List[Person]]         = ZIO.serviceWithZIO[PersonService](_.list());
 
 case class PersonServiceLive(repo: PersonRepository) extends PersonService:
   def create(entity: Person): Task[Long]   = repo.create(entity)
