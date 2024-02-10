@@ -1,9 +1,6 @@
 import zio.*
+import zio.logging.*
 import zio.stream.ZStream
-// import zio.kafka.consumer.*
-// import zio.kafka.producer.{ Producer, ProducerSettings }
-// import zio.kafka.serde.*
-// import org.apache.kafka.clients.producer.RecordMetadata
 import http.Server
 import cats.syntax.all.*
 import cats.effect.*
@@ -32,6 +29,9 @@ object Main extends ZIOAppDefault {
 
   // private def produce(topic: String, key: Long, value: String): RIO[Any with Producer, RecordMetadata] =
   //   Producer.produce[Any, Long, String](topic, key, value, keySerializer = Serde.long, valueSerializer = Serde.string)
+
+  override val bootstrap: ZLayer[ZIOAppArgs, Any, Any] =
+    Runtime.removeDefaultLoggers >>> consoleLogger()
 
   private def producer: ZLayer[Any, Throwable, Producer] =
     ZLayer.scoped(Producer.make(ProducerSettings(BOOSTRAP_SERVERS)))

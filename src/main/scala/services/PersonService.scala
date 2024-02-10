@@ -18,8 +18,9 @@ trait PersonService:
 
 object PersonService:
   def create(entity: Person): ZIO[PersonService & Producer, Throwable, Long] = for {
-    l <- ZIO.serviceWithZIO[PersonService](_.create(entity))
-    - <- ZIO.serviceWithZIO[Producer](_.produce("hello", 1L, entity.toString, Serde.long, Serde.string))
+    l <- ZIO.serviceWithZIO[PersonService](_.create(entity)) 
+    _ <- ZIO.serviceWithZIO[Producer](_.produce("hello", 1L, entity.toString, Serde.long, Serde.string))
+    _ <- ZIO.logInfo(s"Produced: $l")
   } yield l
   def read(id: Long): ZIO[PersonService, Throwable, Option[Person]] = ZIO.serviceWithZIO[PersonService](_.read(id))
   def update(entity: Person): RIO[PersonService, Unit] = ZIO.serviceWithZIO[PersonService](_.update(entity))
